@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ME2 · Volver a la app</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+:root{--bg:#050608;--card:#0d1114;--text:#F4FFFE;--muted:#9fb3b1;--accent:#2AE6D4;--line:#1a2a2a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:520px;margin:0 auto;padding:48px 20px;text-align:center}
+img{width:80px;height:80px;border-radius:18px}
+h1{font-size:1.6rem;margin:14px 0 6px;color:var(--accent)}
+p{color:var(--muted);margin:8px 0}
+.btn{display:inline-block;margin-top:22px;padding:14px 26px;border-radius:12px;background:var(--accent);color:#050608;font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img src="logo.png" alt="ME2">
+  <h1 id="titulo">Volviendo a ME2…</h1>
+  <p id="detalle">ME2 confirma el pago con Mercado Pago al abrirse.</p>
+  <a id="volver" class="btn" href="me2://pago">Volver a ME2</a>
+  <p style="margin-top:26px;font-size:.85rem">Si la app no se abre, abrila desde el celular: el estado de Premium se actualiza solo.</p>
+</div>
+<script>
+(function () {
+  // Página puente de Mercado Pago (back_urls): reenvía a la app solo el estado y el id del pago.
+  // La app nunca confía en estos datos: verifica el pago con el servidor de ME2.
+  var q = new URLSearchParams(location.search);
+  var limpio = function (v, re) { v = (v || "").trim(); return re.test(v) ? v : ""; };
+  var estado = limpio(q.get("estado"), /^(success|failure|pending)$/);
+  var pago = limpio(q.get("payment_id") || q.get("collection_id"), /^[A-Za-z0-9_-]{1,64}$/);
+  if (pago === "null") pago = "";
+  var status = limpio(q.get("status") || q.get("collection_status"), /^[a-z_]{1,32}$/);
+  var p = new URLSearchParams();
+  if (estado) p.set("estado", estado);
+  if (pago) p.set("payment_id", pago);
+  if (status && status !== "null") p.set("status", status);
+  var qs = p.toString();
+  var esquema = "me2://pago" + (qs ? "?" + qs : "");
+  var android = /Android/i.test(navigator.userAgent);
+  var aqui = location.href.split("#")[0];
+  var intento = "intent://pago" + (qs ? "?" + qs : "") + "#Intent;scheme=me2;package=com.me2.android;" +
+    "S.browser_fallback_url=" + encodeURIComponent(aqui + "#sinapp") + ";end";
+  var destino = android ? intento : esquema;
+  var textos = {
+    success: ["Pago recibido", "Volviendo a ME2 para confirmarlo…"],
+    pending: ["Pago pendiente", "Premium se activa cuando Mercado Pago lo acredite."],
+    failure: ["El pago no se completó", "Podés volver a ME2 e intentarlo de nuevo."]
+  };
+  if (textos[estado]) {
+    document.getElementById("titulo").textContent = textos[estado][0];
+    document.getElementById("detalle").textContent = textos[estado][1];
+  }
+  document.getElementById("volver").setAttribute("href", destino);
+  if (location.hash !== "#sinapp") setTimeout(function () { location.href = destino; }, 150);
+})();
+</script>
+</body>
+</html>
